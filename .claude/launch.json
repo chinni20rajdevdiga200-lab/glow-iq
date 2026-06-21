@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "BeautyIQ Web",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\npm.cmd",
+      "runtimeArgs": ["run", "dev", "--prefix", "apps/web"],
+      "port": 3000
+    },
+    {
+      "name": "BeautyIQ Backend",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\npm.cmd",
+      "runtimeArgs": ["run", "dev", "--prefix", "apps/backend"],
+      "port": 3001
+    },
+    {
+      "name": "BeautyIQ Mobile (Expo)",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\npm.cmd",
+      "runtimeArgs": ["run", "start", "--prefix", "apps/mobile"],
+      "port": 19000
+    },
+    {
+      "name": "All Servers (Turbo)",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\npm.cmd",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    }
+  ]
+}

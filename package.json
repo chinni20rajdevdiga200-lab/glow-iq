@@ -1,0 +1,32 @@
+{
+  "name": "beautyiq-ai",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "web": "turbo run dev --filter=web",
+    "mobile": "turbo run start --filter=mobile",
+    "backend": "turbo run dev --filter=backend",
+    "db:generate": "turbo run db:generate --filter=backend",
+    "db:push": "turbo run db:push --filter=backend",
+    "db:migrate": "turbo run db:migrate --filter=backend",
+    "db:studio": "turbo run db:studio --filter=backend"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "prettier": "^3.2.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}

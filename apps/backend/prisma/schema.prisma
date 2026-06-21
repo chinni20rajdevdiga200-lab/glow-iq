@@ -1,0 +1,354 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── User ────────────────────────────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(cuid())
+  clerkId     String   @unique
+  email       String   @unique
+  name        String
+  avatar      String?
+  plan        Plan     @default(FREE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profile         SkinProfile?
+  scans           Scan[]
+  recommendations Recommendation[]
+  subscriptions   Subscription[]
+  progressPhotos  ProgressPhoto[]
+  posts           CommunityPost[]
+  reviews         Review[]
+  followers       Follow[]         @relation("following")
+  following       Follow[]         @relation("follower")
+  chatSessions    ChatSession[]
+
+  @@map("users")
+}
+
+model SkinProfile {
+  id               String     @id @default(cuid())
+  userId           String     @unique
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skinTone         SkinTone?
+  undertone        Undertone?
+  skinType         SkinType?
+  concerns         String[]
+  hexColor         String?
+  rgbR             Int?
+  rgbG             Int?
+  rgbB             Int?
+  beautyScore      Float      @default(0)
+  skinHealthScore  Float      @default(0)
+  scanCount        Int        @default(0)
+  streakDays       Int        @default(0)
+  lastScanAt       DateTime?
+  updatedAt        DateTime   @updatedAt
+
+  @@map("skin_profiles")
+}
+
+// ─── Scan ────────────────────────────────────────────────────────────────────
+
+model Scan {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imageUrl        String?
+  s3Key           String?
+  beautyScore     Float
+  skinHealthScore Float
+  skinTone        String?
+  undertone       String?
+  skinType        String?
+  hexColor        String?
+  rgbR            Int?
+  rgbG            Int?
+  rgbB            Int?
+  concerns        Json
+  recommendations Json     @default("[]")
+  foundationShades Json    @default("[]")
+  rawAiResponse   Json?
+  createdAt       DateTime @default(now())
+
+  @@map("scans")
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+// ─── Product ─────────────────────────────────────────────────────────────────
+
+model Product {
+  id                  String          @id @default(cuid())
+  name                String
+  brand               String
+  category            ProductCategory
+  imageUrl            String?
+  barcode             String?         @unique
+  description         String?
+  safetyScore         Float           @default(0)
+  pregnancySafetyScore Float          @default(0)
+  sensitiveSkinScore  Float           @default(0)
+  overallRating       Float           @default(0)
+  reviewCount         Int             @default(0)
+  price               Float?
+  currency            String?         @default("USD")
+  isVerified          Boolean         @default(false)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  productIngredients  ProductIngredient[]
+  reviews             Review[]
+  recommendations     Recommendation[]
+
+  @@map("products")
+  @@index([barcode])
+  @@index([category])
+}
+
+model Ingredient {
+  id                    String    @id @default(cuid())
+  name                  String
+  inci                  String    @unique
+  aliases               String[]
+  function              String?
+  riskLevel             RiskLevel @default(SAFE)
+  description           String?
+  concerns              String[]
+  isParaben             Boolean   @default(false)
+  isSulfate             Boolean   @default(false)
+  isPhthalate           Boolean   @default(false)
+  isFormaldehydeReleaser Boolean  @default(false)
+  isSyntheticFragrance  Boolean   @default(false)
+  pregnancySafe         Boolean   @default(true)
+  sensitiveSkinSafe     Boolean   @default(true)
+  ewaScore              Int?
+  createdAt             DateTime  @default(now())
+
+  productIngredients    ProductIngredient[]
+
+  @@map("ingredients")
+  @@index([inci])
+}
+
+model ProductIngredient {
+  id           String     @id @default(cuid())
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  position     Int
+  concentration String?
+
+  @@unique([productId, ingredientId])
+  @@map("product_ingredients")
+}
+
+// ─── Recommendation ───────────────────────────────────────────────────────────
+
+model Recommendation {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  category    String
+  reason      String?
+  matchScore  Float    @default(0)
+  createdAt   DateTime @default(now())
+
+  @@map("recommendations")
+  @@index([userId])
+}
+
+// ─── Subscription ────────────────────────────────────────────────────────────
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                 Plan               @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  payments             Payment[]
+
+  @@map("subscriptions")
+}
+
+model Payment {
+  id             String      @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  amount         Float
+  currency       String      @default("USD")
+  status         String
+  stripePaymentId String?
+  createdAt      DateTime    @default(now())
+
+  @@map("payments")
+}
+
+// ─── Progress ─────────────────────────────────────────────────────────────────
+
+model ProgressPhoto {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imageUrl        String
+  s3Key           String?
+  scanId          String?
+  beautyScore     Float?
+  skinHealthScore Float?
+  notes           String?
+  takenAt         DateTime @default(now())
+
+  @@map("progress_photos")
+  @@index([userId, takenAt(sort: Desc)])
+}
+
+// ─── Community ────────────────────────────────────────────────────────────────
+
+model CommunityPost {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  imageUrl  String?
+  tags      String[]
+  likes     Int      @default(0)
+  comments  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("community_posts")
+  @@index([createdAt(sort: Desc)])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating    Float
+  content   String?
+  helpful   Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@map("reviews")
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+
+model ChatSession {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  messages  ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String
+  content   String
+  createdAt DateTime    @default(now())
+
+  @@map("chat_messages")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Plan {
+  FREE
+  PREMIUM
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  TRIALING
+  INCOMPLETE
+}
+
+enum RiskLevel {
+  SAFE
+  MODERATE
+  HIGH
+}
+
+enum SkinTone {
+  FAIR
+  LIGHT
+  MEDIUM
+  OLIVE
+  TAN
+  DEEP
+}
+
+enum Undertone {
+  COOL
+  WARM
+  NEUTRAL
+}
+
+enum SkinType {
+  DRY
+  OILY
+  COMBINATION
+  NORMAL
+  SENSITIVE
+}
+
+enum ProductCategory {
+  CLEANSER
+  TONER
+  SERUM
+  MOISTURIZER
+  SUNSCREEN
+  FOUNDATION
+  CONCEALER
+  BLUSH
+  LIPSTICK
+  EYESHADOW
+  EYELINER
+  MASCARA
+  HAIR
+  TREATMENT
+  MASK
+  EXFOLIATOR
+  EYE_CREAM
+}
