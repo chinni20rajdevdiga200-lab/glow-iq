@@ -46,18 +46,25 @@ export function ProductScanner({ onCapture, loading = false }: Props) {
       return;
     }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        setCameraActive(true);
-      }
-    } catch {
-      setCameraError("Camera access denied. Please allow camera permission in your browser settings, or use Upload Photo.");
+    // Try rear camera first, fall back to any camera
+    const constraints = [
+      { video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } },
+      { video: { facingMode: "environment" } },
+      { video: true },
+    ];
+    let stream: MediaStream | null = null;
+    for (const c of constraints) {
+      try { stream = await navigator.mediaDevices.getUserMedia(c); break; } catch {}
+    }
+    if (!stream) {
+      setCameraError("Camera access denied. Tap Allow when browser asks, or use Upload Photo.");
+      return;
+    }
+    streamRef.current = stream;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(() => {});
+      setCameraActive(true);
     }
   }, []);
 

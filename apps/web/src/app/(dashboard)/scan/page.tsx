@@ -31,21 +31,32 @@ export default function ScanPage() {
   const startCamera = useCallback(async () => {
     setCameraError(null);
     if (!window.isSecureContext) {
-      setCameraError("Camera needs HTTPS. Use Upload Photo instead.");
+      setCameraError("Camera needs HTTPS. Please use Upload Photo instead.");
       return;
     }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        setCameraActive(true);
-      }
-    } catch {
-      setCameraError("Camera access denied. Please allow camera or use Upload Photo.");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError("Camera not supported. Please use Upload Photo.");
+      return;
+    }
+    // Try front camera first, fall back to any camera
+    const constraints = [
+      { video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } },
+      { video: { facingMode: "user" } },
+      { video: true },
+    ];
+    let stream: MediaStream | null = null;
+    for (const c of constraints) {
+      try { stream = await navigator.mediaDevices.getUserMedia(c); break; } catch {}
+    }
+    if (!stream) {
+      setCameraError("Camera access denied. Tap Allow when browser asks, or use Upload Photo.");
+      return;
+    }
+    streamRef.current = stream;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(() => {});
+      setCameraActive(true);
     }
   }, []);
 
